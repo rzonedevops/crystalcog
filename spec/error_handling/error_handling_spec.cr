@@ -7,16 +7,9 @@ require "../../src/opencog/opencog"
 
 describe "Error Handling and Edge Cases" do
   describe "AtomSpace error handling" do
-    before_each do
-      @atomspace = AtomSpace::AtomSpace.new
-    end
-    
-    # Helper method to access atomspace instance
-    def atomspace
-      @atomspace
-    end
     
     it "handles empty names gracefully" do
+      atomspace = AtomSpace::AtomSpace.new
       # Test creating nodes with empty names
       empty_concept = atomspace.add_concept_node("")
       empty_concept.should be_a(AtomSpace::Atom)
@@ -24,6 +17,7 @@ describe "Error Handling and Edge Cases" do
     end
 
     it "handles very long names" do
+      atomspace = AtomSpace::AtomSpace.new
       # Test creating nodes with very long names
       long_name = "a" * 10000
       long_concept = atomspace.add_concept_node(long_name)
@@ -32,6 +26,7 @@ describe "Error Handling and Edge Cases" do
     end
 
     it "handles special characters in names" do
+      atomspace = AtomSpace::AtomSpace.new
       # Test creating nodes with special characters
       special_names = [
         "node with spaces",
@@ -61,6 +56,7 @@ describe "Error Handling and Edge Cases" do
     end
 
     it "handles invalid truth values gracefully" do
+      atomspace = AtomSpace::AtomSpace.new
       # Test truth values with out-of-range values
       begin
         # Strength > 1.0
@@ -88,6 +84,7 @@ describe "Error Handling and Edge Cases" do
     end
 
     it "handles empty link creation" do
+      atomspace = AtomSpace::AtomSpace.new
       # Test creating links with empty outgoing sets
       begin
         empty_link = atomspace.add_link(AtomSpace::AtomType::LIST_LINK, [] of AtomSpace::Atom)
@@ -100,6 +97,7 @@ describe "Error Handling and Edge Cases" do
     end
 
     it "handles circular references in links" do
+      atomspace = AtomSpace::AtomSpace.new
       # Create atoms that reference each other
       a = atomspace.add_concept_node("A")
       b = atomspace.add_concept_node("B")
@@ -119,6 +117,7 @@ describe "Error Handling and Edge Cases" do
     end
 
     it "handles attempts to remove non-existent atoms" do
+      atomspace = AtomSpace::AtomSpace.new
       concept = AtomSpace::ConceptNode.new("nonexistent")
 
       result = atomspace.remove_atom(concept)
@@ -129,6 +128,7 @@ describe "Error Handling and Edge Cases" do
     end
 
     it "handles memory pressure gracefully" do
+      atomspace = AtomSpace::AtomSpace.new
       # Create many atoms to test memory handling
       concepts = [] of AtomSpace::Atom
 
@@ -152,6 +152,7 @@ describe "Error Handling and Edge Cases" do
     end
 
     it "handles concurrent access gracefully" do
+      atomspace = AtomSpace::AtomSpace.new
       # Note: Crystal doesn't have true concurrency, but this tests thread-like behavior
       # In a real concurrent implementation, this would test thread safety
 
@@ -178,17 +179,17 @@ describe "Error Handling and Edge Cases" do
   end
 
   describe "PLN error handling" do
-    before_each do
-      @pln_engine = PLN::PLNEngine.new(atomspace)
-    end
-
     it "handles empty atomspace reasoning" do
-      new_atoms = @pln_engine.reason(5)
+      atomspace = AtomSpace::AtomSpace.new
+      pln_engine = PLN::PLNEngine.new(atomspace)
+      new_atoms = pln_engine.reason(5)
       new_atoms.should be_empty
       atomspace.size.should eq(0)
     end
 
     it "handles malformed atoms in reasoning" do
+      atomspace = AtomSpace::AtomSpace.new
+      pln_engine = PLN::PLNEngine.new(atomspace)
       # Create valid atoms
       dog = atomspace.add_concept_node("dog")
       cat = atomspace.add_concept_node("cat")
@@ -197,13 +198,15 @@ describe "Error Handling and Edge Cases" do
       inheritance = atomspace.add_inheritance_link(dog, cat)
 
       # Reasoning should handle this gracefully even if internal structure is complex
-      new_atoms = @pln_engine.reason(3)
+      new_atoms = pln_engine.reason(3)
 
       # Should complete without crashing
       new_atoms.size.should be >= 0
     end
 
     it "handles infinite recursion prevention" do
+      atomspace = AtomSpace::AtomSpace.new
+      pln_engine = PLN::PLNEngine.new(atomspace)
       # Create circular inheritance that could cause infinite loops
       a = atomspace.add_concept_node("A")
       b = atomspace.add_concept_node("B")
@@ -216,7 +219,7 @@ describe "Error Handling and Edge Cases" do
 
       # Should complete without infinite loop
       start_time = Time.monotonic
-      new_atoms = @pln_engine.reason(10)
+      new_atoms = pln_engine.reason(10)
       end_time = Time.monotonic
 
       # Should complete in reasonable time
@@ -225,6 +228,8 @@ describe "Error Handling and Edge Cases" do
     end
 
     it "handles extreme truth values in reasoning" do
+      atomspace = AtomSpace::AtomSpace.new
+      pln_engine = PLN::PLNEngine.new(atomspace)
       # Create atoms with extreme truth values
       tv_perfect = AtomSpace::SimpleTruthValue.new(1.0, 1.0)
       tv_impossible = AtomSpace::SimpleTruthValue.new(0.0, 1.0)
@@ -240,7 +245,7 @@ describe "Error Handling and Edge Cases" do
       atomspace.add_inheritance_link(c, d, tv_unknown)
 
       # Should handle extreme values gracefully
-      new_atoms = @pln_engine.reason(5)
+      new_atoms = pln_engine.reason(5)
 
       # Should complete without mathematical errors
       new_atoms.size.should be >= 0
@@ -256,17 +261,21 @@ describe "Error Handling and Edge Cases" do
     end
 
     it "handles rule application failures gracefully" do
+      atomspace = AtomSpace::AtomSpace.new
+      pln_engine = PLN::PLNEngine.new(atomspace)
       # Create scenario where rules might fail to apply
       single_concept = atomspace.add_concept_node("lonely")
 
       # Deduction rule needs two inheritance links, but we only have one concept
-      new_atoms = @pln_engine.reason(3)
+      new_atoms = pln_engine.reason(3)
 
       # Should complete without errors
       new_atoms.size.should be >= 0
     end
 
     it "handles memory cleanup during reasoning" do
+      atomspace = AtomSpace::AtomSpace.new
+      pln_engine = PLN::PLNEngine.new(atomspace)
       # Create large reasoning scenario and test memory handling
       concepts = 50.times.map { |i|
         atomspace.add_concept_node("memory_test_#{i}")
@@ -283,7 +292,7 @@ describe "Error Handling and Edge Cases" do
       initial_memory = GC.stats.heap_size
 
       # Run reasoning
-      new_atoms = @pln_engine.reason(3)
+      new_atoms = pln_engine.reason(3)
 
       # Force garbage collection
       GC.collect
@@ -303,45 +312,51 @@ describe "Error Handling and Edge Cases" do
   end
 
   describe "URE error handling" do
-    before_each do
-      @ure_engine = URE::UREEngine.new(atomspace)
-    end
-
     it "handles empty atomspace in forward chaining" do
-      new_atoms = @ure_engine.forward_chain(5)
+      atomspace = AtomSpace::AtomSpace.new
+      ure_engine = URE::UREEngine.new(atomspace)
+      new_atoms = ure_engine.forward_chain(5)
       new_atoms.should be_empty
       atomspace.size.should eq(0)
     end
 
     it "handles empty atomspace in backward chaining" do
+      atomspace = AtomSpace::AtomSpace.new
+      ure_engine = URE::UREEngine.new(atomspace)
       target = AtomSpace::ConceptNode.new("nonexistent")
-      result = @ure_engine.backward_chain(target)
+      result = ure_engine.backward_chain(target)
       result.should be_false
     end
 
     it "handles malformed rule premises" do
+      atomspace = AtomSpace::AtomSpace.new
+      ure_engine = URE::UREEngine.new(atomspace)
       # Add atoms that don't match any rule premises properly
       concept = atomspace.add_concept_node("isolated")
       number = AtomSpace::NumberNode.new(42.0)
       atomspace.add_atom(number)
 
       # Should handle gracefully when no rules apply
-      new_atoms = @ure_engine.forward_chain(3)
+      new_atoms = ure_engine.forward_chain(3)
       new_atoms.size.should be >= 0
     end
 
     it "handles rule application with insufficient premises" do
+      atomspace = AtomSpace::AtomSpace.new
+      ure_engine = URE::UREEngine.new(atomspace)
       # Add single evaluation link (insufficient for conjunction rule)
       pred = atomspace.add_predicate_node("lonely_pred")
       concept = atomspace.add_concept_node("concept")
       eval = atomspace.add_evaluation_link(pred, concept)
 
       # Should complete without errors even if rules can't apply
-      new_atoms = @ure_engine.forward_chain(3)
+      new_atoms = ure_engine.forward_chain(3)
       new_atoms.size.should be >= 0
     end
 
     it "handles fitness calculation edge cases" do
+      atomspace = AtomSpace::AtomSpace.new
+      ure_engine = URE::UREEngine.new(atomspace)
       # Create evaluation links with extreme truth values for fitness testing
       pred = atomspace.add_predicate_node("extreme_pred")
       concept1 = atomspace.add_concept_node("concept1")
@@ -356,11 +371,13 @@ describe "Error Handling and Edge Cases" do
       eval2 = atomspace.add_evaluation_link(pred, concept2, tv_perfect)
 
       # Should handle fitness calculations gracefully
-      new_atoms = @ure_engine.forward_chain(2)
+      new_atoms = ure_engine.forward_chain(2)
       new_atoms.size.should be >= 0
     end
 
     it "handles deep backward chaining searches" do
+      atomspace = AtomSpace::AtomSpace.new
+      ure_engine = URE::UREEngine.new(atomspace)
       # Create deep goal that would require many search steps
       concepts = 10.times.map { |i|
         atomspace.add_concept_node("deep_#{i}")
@@ -383,13 +400,15 @@ describe "Error Handling and Edge Cases" do
       )
 
       # Should complete within depth limits
-      result = @ure_engine.backward_chain(goal)
+      result = ure_engine.backward_chain(goal)
 
       # Result depends on implementation, but should not hang
       result.should be_a(Bool)
     end
 
     it "handles rule conflicts and contradictions" do
+      atomspace = AtomSpace::AtomSpace.new
+      ure_engine = URE::UREEngine.new(atomspace)
       # Create scenario where rules might produce conflicting results
       a = atomspace.add_concept_node("A")
       b = atomspace.add_concept_node("B")
@@ -403,7 +422,7 @@ describe "Error Handling and Edge Cases" do
       eval_false = atomspace.add_evaluation_link(pred_false, a, tv_high)
 
       # Should handle contradictory knowledge gracefully
-      new_atoms = @ure_engine.forward_chain(3)
+      new_atoms = ure_engine.forward_chain(3)
       new_atoms.size.should be >= 0
 
       # Atomspace should remain consistent
@@ -418,12 +437,10 @@ describe "Error Handling and Edge Cases" do
   end
 
   describe "Cross-component error handling" do
-    before_each do
-      @pln_engine = PLN.create_engine(atomspace)
-      @ure_engine = URE.create_engine(atomspace)
-    end
-
     it "handles exceptions across all components" do
+      atomspace = AtomSpace::AtomSpace.new
+      pln_engine = PLN.create_engine(atomspace)
+      ure_engine = URE.create_engine(atomspace)
       begin
         # Create scenario that might trigger various exceptions
         concepts = 5.times.map { |i|
@@ -437,8 +454,8 @@ describe "Error Handling and Edge Cases" do
         end
 
         # Run both reasoning engines
-        pln_result = @pln_engine.reason(2)
-        ure_result = @ure_engine.forward_chain(2)
+        pln_result = pln_engine.reason(2)
+        ure_result = ure_engine.forward_chain(2)
 
         # Should complete successfully
         pln_result.should be_a(Array(AtomSpace::Atom))
@@ -458,6 +475,9 @@ describe "Error Handling and Edge Cases" do
     end
 
     it "maintains atomspace consistency across component failures" do
+      atomspace = AtomSpace::AtomSpace.new
+      pln_engine = PLN.create_engine(atomspace)
+      ure_engine = URE.create_engine(atomspace)
       initial_atoms = atomspace.get_all_atoms.dup
       initial_size = atomspace.size
 
@@ -473,8 +493,8 @@ describe "Error Handling and Edge Cases" do
         atomspace.add_inheritance_link(problematic_concepts[2], problematic_concepts[0])
 
         # Run reasoning that might fail
-        @pln_engine.reason(10)        # Might hit iteration limits
-        @ure_engine.forward_chain(10) # Might hit iteration limits
+        pln_engine.reason(10)        # Might hit iteration limits
+        ure_engine.forward_chain(10) # Might hit iteration limits
 
       rescue ex : Exception
         # Even if reasoning fails, atomspace should remain consistent
@@ -500,6 +520,9 @@ describe "Error Handling and Edge Cases" do
     end
 
     it "handles resource exhaustion gracefully" do
+      atomspace = AtomSpace::AtomSpace.new
+      pln_engine = PLN.create_engine(atomspace)
+      ure_engine = URE.create_engine(atomspace)
       # Test behavior under resource pressure
       large_concepts = [] of AtomSpace::Atom
 
@@ -517,8 +540,8 @@ describe "Error Handling and Edge Cases" do
 
           # Periodically try reasoning
           if i % 500 == 0
-            @pln_engine.reason(1)
-            @ure_engine.forward_chain(1)
+            pln_engine.reason(1)
+            ure_engine.forward_chain(1)
           end
         end
       rescue ex : Exception
@@ -536,16 +559,15 @@ describe "Error Handling and Edge Cases" do
   end
 
   describe "Input validation and sanitization" do
-    before_each do
-    end
-
     it "handles null and nil-like inputs" do
+      atomspace = AtomSpace::AtomSpace.new
       # Test with empty string (closest to null in Crystal)
       empty_concept = atomspace.add_concept_node("")
       empty_concept.should be_a(AtomSpace::Atom)
     end
 
     it "validates atom type consistency" do
+      atomspace = AtomSpace::AtomSpace.new
       # Test creating links with inappropriate atom types
       concept = atomspace.add_concept_node("concept")
       predicate = atomspace.add_predicate_node("predicate")
@@ -556,6 +578,7 @@ describe "Error Handling and Edge Cases" do
     end
 
     it "handles extremely large truth value ranges" do
+      atomspace = AtomSpace::AtomSpace.new
       # Test with very small and very large numbers
       tiny_tv = AtomSpace::SimpleTruthValue.new(1e-10, 1e-10)
       huge_tv = AtomSpace::SimpleTruthValue.new(0.999999999, 0.999999999)
@@ -568,6 +591,7 @@ describe "Error Handling and Edge Cases" do
     end
 
     it "handles rapid operations without data corruption" do
+      atomspace = AtomSpace::AtomSpace.new
       # Perform many rapid operations to test data integrity
       operations_count = 1000
       created_atoms = [] of AtomSpace::Atom
