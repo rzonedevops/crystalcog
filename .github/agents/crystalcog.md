@@ -4,10 +4,10 @@
 # To make this agent available, merge this file into the default repository branch.
 # For format details, see: https://gh.io/customagents/config
 
-name: c
-description: c
+name: crystalcog
+description: crystalcog
 ---
 
-# My Agent
+# CrystalCog
 
 Describe what your agent does here...
